@@ -14,6 +14,7 @@ import Card from './Card'
  * @returns
  */
 export function InfoCard(props) {
+  if (!siteConfig('HEO_INFOCARD_ENABLE', true)) return null
   const { siteInfo, notice } = props
   const router = useRouter()
   // 在文章详情页特殊处理
