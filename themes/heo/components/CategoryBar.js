@@ -3,6 +3,7 @@ import { useGlobal } from '@/lib/global'
 import SmartLink from '@/components/SmartLink'
 import { useRouter } from 'next/router'
 import { useRef, useState } from 'react'
+import { siteConfig } from '@/lib/config'
 
 /**
  * 博客列表上方嵌入条
@@ -10,6 +11,7 @@ import { useRef, useState } from 'react'
  * @returns
  */
 export default function CategoryBar(props) {
+  if (!siteConfig('HEO_HOME_BANNER_ENABLE', true)) return null
   const { categoryOptions, border = true } = props
   const { locale } = useGlobal()
   const [scrollRight, setScrollRight] = useState(false)

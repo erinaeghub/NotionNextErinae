@@ -27,18 +27,20 @@ const FaceBookPage = dynamic(
  * @returns
  */
 export default function SideRight(props) {
-  const { post, tagOptions, currentTag, rightAreaSlot } = props
+  const { post, lock, tagOptions, currentTag, rightAreaSlot, posts } = props
 
-  // 只摘取标签的前60个，防止右侧过长
-  const sortedTags = tagOptions?.slice(0, 60) || []
+  // 标签云数量跟随当前页文章数量动态调整：文章越少，标签云也越短，避免比文章列表长很多
+  // 下限10个（避免只有1篇文章时标签云显得太空），上限60个（原有上限，避免文章很多时标签云爆炸），中间按 "当前页文章数 x 6" 估算
+  const tagCloudLimit = Math.min(60, Math.max(10, (posts?.length || 0) * 6))
+  const sortedTags = tagOptions?.slice(0, tagCloudLimit) || []
 
   return (
     <div id='sideRight' className='hidden xl:block w-72 space-y-4 h-full'>
       <InfoCard {...props} className='w-72 wow fadeInUp' />
 
       <div className='sticky top-20 space-y-4'>
-        {/* 文章页显示目录 */}
-        {post && post.toc && post.toc.length > 0 && (
+        {/* 文章页显示目录（上锁文章不显示） */}
+        {!lock && post && post.toc && post.toc.length > 0 && (
           <Card className='bg-white dark:bg-[#1e1e1e] wow fadeInUp'>
             <Catalog toc={post.toc} />
           </Card>
