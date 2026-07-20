@@ -27,18 +27,26 @@ const FaceBookPage = dynamic(
  * @returns
  */
 export default function SideRight(props) {
-  const { post, lock, tagOptions, currentTag, rightAreaSlot, posts } = props
+  const { post, lock, tagOptions, currentTag, rightAreaSlot, contentHeight } =
+    props
 
-  // 标签云数量跟随当前页文章数量动态调整：文章越少，标签云也越短，避免比文章列表长很多
-  // 下限10个（避免只有1篇文章时标签云显得太空），上限60个（原有上限，避免文章很多时标签云爆炸），中间按 "当前页文章数 x 6" 估算
-  const tagCloudLimit = Math.min(60, Math.max(10, (posts?.length || 0) * 6))
-  const sortedTags = tagOptions?.slice(0, tagCloudLimit) || []
+  // 保留全部标签（不再按数量硬性砍掉），交给下面的高度限制去处理"太长"的问题——
+  // 这样不会因为猜错数量而丢标签，超出部分统一变成可滚动查看
+  const sortedTags = tagOptions?.slice(0, 60) || []
+
+  // 让右侧栏整体（目录/交流群/最新文章/标签云/统计）不超过左侧内容区的真实高度，
+  // 内容少的页面（比如只有几篇文章的分页）右侧栏会跟着变矮，不再显得又长又空；
+  // 260px 是下限，避免内容极少时右侧栏被压缩到不成样子。
+  // contentHeight 在客户端测量完成前是 null，此时不加限制，保持原有效果，避免首屏闪烁。
+  const sideStackStyle = contentHeight
+    ? { maxHeight: `${Math.max(contentHeight, 260)}px`, overflowY: 'auto' }
+    : {}
 
   return (
     <div id='sideRight' className='hidden xl:block w-72 space-y-4 h-full'>
       <InfoCard {...props} className='w-72 wow fadeInUp' />
 
-      <div className='sticky top-20 space-y-4'>
+      <div className='sticky top-20 space-y-4' style={sideStackStyle}>
         {/* 文章页显示目录（上锁文章不显示） */}
         {!lock && post && post.toc && post.toc.length > 0 && (
           <Card className='bg-white dark:bg-[#1e1e1e] wow fadeInUp'>
