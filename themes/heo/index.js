@@ -22,7 +22,7 @@ import { isBrowser } from '@/lib/utils'
 import { Transition } from '@headlessui/react'
 import SmartLink from '@/components/SmartLink'
 import { useRouter } from 'next/router'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import BlogPostArchive from './components/BlogPostArchive'
 import BlogPostListPage from './components/BlogPostListPage'
 import BlogPostListScroll from './components/BlogPostListScroll'
@@ -58,6 +58,23 @@ const LayoutBase = props => {
   const { fullWidth, isDarkMode } = useGlobal()
   const router = useRouter()
 
+  // 测量左侧内容区（文章列表等）的真实渲染高度，
+  // 用于让右侧标签云等挂件的总高度不超过内容区，避免内容少时右侧栏显得又长又空
+  const contentRef = useRef(null)
+  const [contentHeight, setContentHeight] = useState(null)
+  useEffect(() => {
+    const el = contentRef.current
+    if (!el || typeof ResizeObserver === 'undefined') {
+      return
+    }
+    const updateHeight = () => setContentHeight(el.offsetHeight)
+    updateHeight()
+    const observer = new ResizeObserver(updateHeight)
+    observer.observe(el)
+    return () => observer.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.asPath])
+
   const headerSlot = (
     <header>
       {/* 顶部导航 */}
@@ -76,7 +93,9 @@ const LayoutBase = props => {
 
   // 右侧栏 用户信息+标签列表
   const slotRight =
-    router.route === '/404' || fullWidth ? null : <SideRight {...props} />
+    router.route === '/404' || fullWidth ? null : (
+      <SideRight {...props} contentHeight={contentHeight} />
+    )
 
   const maxWidth = fullWidth ? 'max-w-[96rem] mx-auto' : 'max-w-[86rem]' // 普通最大宽度是86rem和顶部菜单栏对齐，留空则与窗口对齐
 
@@ -110,8 +129,11 @@ const LayoutBase = props => {
           className={`${HEO_HERO_BODY_REVERSE ? 'flex-row-reverse' : ''} w-full mx-auto lg:flex justify-center relative z-10`}>
           <div className={`w-full h-auto ${className || ''}`}>
             {/* 主区上部嵌入 */}
-            {slotTop}
-            {children}
+            {/* ref 挂载在这层，用于测量内容区真实高度（不受外层flex等高拉伸影响），供右侧栏参考对齐 */}
+            <div ref={contentRef}>
+              {slotTop}
+              {children}
+            </div>
           </div>
 
           <div className='lg:px-2'></div>
@@ -183,7 +205,7 @@ const LayoutSearch = props => {
   useEffect(() => {
     // 高亮搜索结果
     if (currentSearch) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         replaceSearchResult({
           doms: document.getElementsByClassName('replace'),
           search: currentSearch,
@@ -193,10 +215,11 @@ const LayoutSearch = props => {
           }
         })
       }, 100)
+      return () => clearTimeout(timer)
     }
-  }, [])
+  }, [currentSearch])
   return (
-    <div currentSearch={currentSearch}>
+    <div data-current-search={currentSearch || ''}>
       <div id='post-outer-wrapper' className='px-5  md:px-0'>
         {!currentSearch ? (
           <SearchNav {...props} />
@@ -273,7 +296,7 @@ const LayoutSlug = props => {
   useEffect(() => {
     // 404
     if (!post) {
-      setTimeout(
+      const timer = setTimeout(
         () => {
           if (isBrowser) {
             const article = document.querySelector(
@@ -288,8 +311,9 @@ const LayoutSlug = props => {
         },
         waiting404
       )
+      return () => clearTimeout(timer)
     }
-  }, [post])
+  }, [post, router, waiting404])
   return (
     <>
       <div
@@ -300,10 +324,7 @@ const LayoutSlug = props => {
         {!lock && post && (
           <div className='mx-auto md:w-full md:px-5'>
             {/* 文章主体 */}
-            <article
-              id='article-wrapper'
-              itemScope
-              itemType='https://schema.org/Movie'>
+            <article id='article-wrapper'>
               {/* Notion文章主体 */}
               <section
                 className='wow fadeInUp p-5 justify-center mx-auto'
